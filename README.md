@@ -74,10 +74,11 @@ The dashboard's performance was much improved by the backend changes. Optimized 
 Iterative changes made during the process culminated in the dashboard's final version. It has a responsive design, a contemporary user interface, and sophisticated filtering functions. Usability has been greatly improved by the addition of general categories and synchronized filters, while backend optimizations guarantee quicker performance and real-time updates. Screenshots comparing the dashboard's before and after reveal how drastically it has changed.
 
 ![Old Dashboard](images/old-dashboard.png)
-
+Old Dashboard
 ![new-dashboard-1](https://github.com/user-attachments/assets/1b515611-b784-410f-a3d3-75fa82c5d88a)
+New Dashboard 1
 ![new-dashboard-2](https://github.com/user-attachments/assets/dec2a04f-16f4-45a0-97e7-9c2431d8e97d)
-
+New Dashboard 2
 
 ---
 
