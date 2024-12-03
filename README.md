@@ -75,7 +75,8 @@ Iterative changes made during the process culminated in the dashboard's final ve
 
 ![Old Dashboard](images/old-dashboard.png)
 
-![Updated Dashboard](images/new-dashboard.png)
+![new-dashboard-1](https://github.com/user-attachments/assets/1b515611-b784-410f-a3d3-75fa82c5d88a)
+![new-dashboard-2](https://github.com/user-attachments/assets/dec2a04f-16f4-45a0-97e7-9c2431d8e97d)
 
 
 ---
