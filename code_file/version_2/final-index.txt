@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- External widget for accessibility purposes -->
+    <script src="https://cdn.userway.org/widget.js" data-account="ImGca9IxjJ"></script>
+    <title>Zipcode Search</title>
+    
+    <!-- External stylesheets for select2 and Tailwind CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- External stylesheets for Leaflet.js (used for maps) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    
+    <style>
+      /* Style for the full height of the page */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Container takes up full width */
+      .container {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      /* Ensures scrolling if content exceeds the section */
+      .categories-section,
+      .results-section,
+      .map-section {
+        overflow-y: auto;
+      }
+
+      /* Set the map height */
+      #map {
+        height: 300px;
+        width: 100%;
+      }
+
+      /* Separator style for sections */
+      .separator {
+        border-top: 2px solid #d3d3d3;
+        margin: 20px 0;
+      }
+      
+      /* Styling for the select2 dropdown choices */
+      .select2-selection__choice {
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+      }
+
+      /* Adjusts the select2 dropdown container height */
+      .select2-selection {
+        max-height: 50px;
+        overflow-y: auto;
+      }
+
+      /* Hides the clear button in select2 */
+      .select2-selection__clear {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 px-6 py-12">
+    <div class="container">
+      <!-- Search form for zipcode and filters -->
+      <div class="search-bar" style="width: 100%;">
+        <form action="/" method="POST" class="p-2 rounded shadow-md bg-white">
+          <div class="mb-6">
+            <!-- Review button -->
+            <button id="reviewBtn" 
+              class="bg-red-700 hover:bg-red-500 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded max-w-xs sm:w-auto focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent transition-all">
+              Review
+            </button>
+            
+            <!-- Logo and heading -->
+            <img src="{{url_for('static', filename='sbm_logo.png')}}" alt="Long Island Cares Logo" class="mx-auto h-12 w-auto mb-3">
+            <h1 class="text-3xl font-bold tracking-tight text-center text-red-700 mb-2">Long Island Community Resources Test</h1>
+            <p class="text-center leading-8 text-gray-600">Search for resources by zipcode and distance.</p>
+          </div>
+
+          <!-- Filter fields for category, delivery method, zipcode, and distance -->
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="sm:w-full">
+              <label for="category" class="block text-gray-700 text-sm font-bold mb-2">Category</label>
+              <select id="category" name="category" multiple 
+                      class="w-full shadow border rounded py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent max-h-40 overflow-y-auto">
+                <option value="all">All selected</option>
+                {% for category_name in category %}
+                  <option value="{{ category_name }}">{{ category_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label for="deliverymethod" class="block text-gray-700 text-sm font-bold mb-2">Delivery Method:</label>
+              <select id="deliverymethod" name="deliverymethod" class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+                <option value="all">All selected</option>
+                {% for deliverymethod in unique_delivery_method %}
+                  <option value="{{ deliverymethod }}">{{ deliverymethod }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          
+            <!-- Zipcode input -->
+            <div>
+              <label for="zipcode" class="block text-gray-700 text-sm font-bold mb-2">Zipcode:</label>
+              {% if zipcode %}
+                <input type="text" value="{{ zipcode }}" id="zipcode" name="zipcode" pattern="[0-9]{5}" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+              {% else %}
+                <input type="text" value="11733" id="zipcode" name="zipcode" pattern="[0-9]{5}" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+              {% endif %}
+            </div>
+          
+            <!-- Distance input -->
+            <div>
+              <label for="distance" class="block text-gray-700 text-sm font-bold mb-2">Distance (miles):</label>
+              {% if distance %}
+                <input type="number" value="{{ distance }}" id="distance" name="distance" min="1" max="99" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+              {% else %}
+                <input type="number" value="99" id="distance" name="distance" min="1" max="99" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+              {% endif %}
+            </div>
+
+            <!-- Submit button -->
+            <div style="margin-top: 1.8rem;">
+              <input type="submit" value="Search" class="bg-red-700 hover:bg-red-500 text-white font-bold py-2 px-4 rounded w-full focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Bottom section with filters and map -->
+      <div class="bottom-section flex mt-6">
+        <div class="categories-section w-1/5 border-r border-gray-300 pr-4">
+          <h2 class="text-xl font-bold mb-4">Search Filters</h2>
+          
+          <!-- Category filter with checkboxes -->
+          <form id="myForm">
+            <div class="mb-4">
+              <label class="block text-gray-700 text-sm font-bold mb-2">Category:</label>
+              <div>
+                <input type="checkbox" id="subcategory1" name="subcategory" value="Food & Nutrition Services" class="mr-2">
+                <label for="subcategory1" class="text-gray-700 text-sm md:text-base lg:text-lg">Food & Nutrition Services</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory2" name="subcategory" value="Housing & Utility Assistance" class="mr-2">
+                <label for="subcategory2" class="text-gray-700 text-sm md:text-base lg:text-lg">Housing & Utility Assistance</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory3" name="subcategory" value="Health & Medical Services" class="mr-2">
+                <label for="subcategory3" class="text-gray-700 text-sm md:text-base lg:text-lg">Health & Medical Services</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory4" name="subcategory" value="Community & Family Services" class="mr-2">
+                <label for="subcategory4" class="text-gray-700 text-sm md:text-base lg:text-lg">Community & Family Services</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory5" name="subcategory" value="Legal & Social Assistance" class="mr-2">
+                <label for="subcategory5" class="text-gray-700 text-sm md:text-base lg:text-lg">Legal & Social Assistance</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory6" name="subcategory" value="Emergency & Crisis Services" class="mr-2">
+                <label for="subcategory6" class="text-gray-700 text-sm md:text-base lg:text-lg">Emergency & Crisis Services</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory7" name="subcategory" value="Employment & Veteran Services" class="mr-2">
+                <label for="subcategory7" class="text-gray-700 text-sm md:text-base lg:text-lg">Employment & Veteran Services</label>
+              </div>
+              <div>
+                <input type="checkbox" id="subcategory8" name="subcategory" value="Transportation Services" class="mr-2">
+                <label for="subcategory8" class="text-gray-700 text-sm md:text-base lg:text-lg">Transportation Services</label>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Map section containing the disclaimer and results -->
+      <div class="map-section w-4/5 px-4">
+        <!-- Disclaimer section with information about external links -->
+        <div class="mb-4">
+          <p class="bg-red-700 text-white text-xs md:text-xs lg:text-xs rounded px-3 py-1 leading-tight">
+            <!-- External link warning about navigating away from the site -->
+            <a href="https://sdoh.ahi-projects.com" class="underline text-white" target="_blank" rel="noopener noreferrer">
+              sdoh.ahi-projects.com
+            </a> may contain links to web sites created and maintained by other public and/or private 
+            organizations and individuals or to documents that contain links to other web sites. 
+            <a href="https://sdoh.ahi-projects.com" class="underline text-white" target="_blank" rel="noopener noreferrer">
+              sdoh.ahi-projects.com
+            </a> provides these links as a service to our users. When you follow a link to an external site, you are leaving 
+            <a href="https://sdoh.ahi-projects.com" class="underline text-white" target="_blank" rel="noopener noreferrer">
+              sdoh.ahi-projects.com
+            </a> and are subject to the privacy and security policies of the owners/sponsors of the external site. 
+            <a href="https://sdoh.ahi-projects.com" class="underline text-white" target="_blank" rel="noopener noreferrer">
+              sdoh.ahi-projects.com
+            </a> does not control or guarantee the accuracy, relevance, timeliness, or completeness of information contained in a linked site. 
+            We also do not endorse the organizations or individuals maintaining sites that we link, any views they express, or any products/services they offer.
+          </p>
+        </div>
+
+        <!-- Section to display the map with id 'map' -->
+        <div id="map" class="mb-4"></div>
+        
+        <!-- Separator for visual structure -->
+        <div class="separator"></div>
+
+        <!-- Results section to display the matching resources -->
+        <div class="results-section">
+          {% if results %}
+            <!-- Display the results header dynamically based on the available results -->
+            <h2 class="text-xl font-bold mt-5">Results for {{ zipcode }} within {{ distance }} miles</h2>
+            <!-- Horizontal line separator between the header and results -->
+            <div class="border-b-2 border-gray-300 mt-10 mb-10"></div>
+
+            <!-- Button to print the results -->
+            <div class="text-left">
+              <button onclick="window.print()" class="bg-red-700 hover:bg-red-500 text-white font-bold py-2 px-4 rounded mt-2">Print Results</button>
+            </div>
+
+            <!-- Display the results in a grid format -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <!-- Loop through the results and display each result in a card -->
+              {% for result in results %}
+                <div class="bg-gray-100 p-6 rounded-lg shadow-md transition duration-300 ease-in-out hover:bg-gray-200">
+                  <!-- Display the organization name -->
+                  <h3 class="text-lg font-semibold text-gray-800">{{ result.organization }}</h3>
+                  <!-- Display the service tag and delivery method -->
+                  <h5 class="text-sm font-semibold text-gray-600">Service Tag: {{ result.filter_tags }}</h5>
+                  <h5 class="text-sm font-semibold text-gray-600">Delivery Method: {{ result.delivery_method }}</h5>
+                  <!-- Display the address, phone number, and hours of operation -->
+                  <p class="text-gray-600">{{ result.address }}, {{ result.city }}</p>
+                  <p class="text-gray-600">{{ result.phone }}</p>
+                  <p class="text-gray-600">{{ result.hours_of_operation }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Script to initialize and display the map with markers for results -->
+      <script>
+        // Check if results_json exists and is not empty
+        var results_json = '{{ results_json | safe }}';
+        console.log('Results JSON initial: ', results_json)
+
+        // If results_json is not empty, parse and display on the map
+        if (results_json && results_json !== '[]') {
+          var results;
+          
+          try {
+            // Try parsing the results JSON
+            results = JSON.parse(results_json);
+          } catch (e) {
+            // Handle any errors while parsing the JSON
+            console.error('Error parsing JSON:', e);
+            // Optionally, hide the map or display a message
+            document.getElementById('map').style.display = 'none';
+            // Stop script execution if there's an error
+            throw new Error('Stopping script execution due to JSON parsing error.');
+          }
+
+          // Initialize the Leaflet map with a specific center and zoom level
+          var map = L.map('map').setView([40.789142, -73.134960], 9);
+
+          // Add OpenStreetMap tiles to the map
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18
+          }).addTo(map);
+
+          // Loop through the results and add markers to the map
+          results.forEach(function(result) {
+            if (result.geometry && result.geometry.coordinates) {
+              var lat = result.geometry.coordinates[1];
+              var lng = result.geometry.coordinates[0];
+
+              console.log('Lat: ', lat)
+              console.log('Lng: ', lng)
+
+              // Check if the latitude and longitude are valid numbers
+              if (!isNaN(lat) && !isNaN(lng)) {
+                // Add a marker to the map at the specified latitude and longitude
+                var marker = L.marker([lat, lng]).addTo(map);
+
+                // Create a popup with the organization details
+                var popup = L.popup().setContent("<b>" + result.organization + "</b><br>" + result.filter_tags + "</b><br>" + result.address);
+
+                // Bind the popup to the marker to display on mouseover
+                marker.on('mouseover', function() {
+                  marker.openPopup();
+                });
+
+                // Bind the popup to the marker to close on mouseout
+                marker.on('mouseout', function() {
+                  marker.closePopup();
+                });
+
+                // Optionally, bind the popup to open on click
+                marker.bindPopup(popup);
+              }
+            }
+          });
+        } else {
+          // If no results exist, hide the map container or display a message
+          document.getElementById('map').style.display = 'none';
+        }
+      </script>
+
+      <!-- Script to synchronize the category dropdown and checkboxes -->
+      <script>
+        $(document).ready(function () {
+          // Initialize Select2 for the category dropdown
+          $('#category').select2({
+            placeholder: "Select Categories",
+            multiple: true,  // Enable multiple selections in the dropdown
+            allowClear: true // Allow clearing of selections
+          });
+
+          // Handle checkbox changes and sync them with the dropdown
+          $("input[name='subcategory']").on("change", function () {
+            const selectedCategories = [];
+
+            // Collect all checked checkbox values
+            $("input[name='subcategory']:checked").each(function () {
+              selectedCategories.push($(this).val());
+            });
+
+            // Sync the selected categories with the dropdown
+            $('#category').val(selectedCategories).trigger('change');
+          });
+
+          // Sync dropdown changes to checkboxes
+          $('#category').on('change', function () {
+            const selectedCategories = $(this).val();
+
+            // Uncheck all checkboxes
+            $("input[name='subcategory']").prop('checked', false);
+
+            // Check the checkboxes that match the selected categories
+            if (selectedCategories) {
+              $("input[name='subcategory']").each(function () {
+                if (selectedCategories.includes($(this).val())) {
+                  $(this).prop('checked', true);
+                }
+              });
+            }
+          });
+
+          // Handle initial state for page load
+          const selectedCategoryOnLoad = $('#category').val();
+          if (selectedCategoryOnLoad && selectedCategoryOnLoad.length > 0) {
+            $("input[name='subcategory']").each(function () {
+              if (selectedCategoryOnLoad.includes($(this).val())) {
+                $(this).prop('checked', true);
+              }
+            });
+          }
+        });
+      </script>
+  </body>
+</html>
