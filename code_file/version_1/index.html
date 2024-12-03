@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Zipcode Search</title>
+    <!-- Include Tailwind CSS CDN -->
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+  
+      .container {
+      width: 100%;
+      max-width: 100%;
+    }
+  
+      .top-section {
+        display: flex;
+        position: fixed;
+        justify-content: space-between;
+        align-items: center;
+        height: 25%; 
+        justify-content: space-between;
+        padding: 0;
+      }
+  
+      .left-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+        justify-content: center;
+        width: 40%; 
+        padding: 0;
+      }
+
+      .right-section {
+        display: flex;
+        align-items: center;
+         justify-content: center;
+         position: fixed;
+         top: 0;
+         right: 0;
+         width: 20%
+        }
+
+
+
+      .bottom-section {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        height: 75%;
+        padding: 10px;
+        gap: 10px;
+      }
+  
+      .left-content {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 66.66%;
+        height: 75%;
+        overflow-y: auto; 
+        padding: 10px;
+      }
+
+      .right-map {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        height: 75%;
+        width: 33.33%;
+      }
+
+      #map {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 px-6 py-12">
+    <div class="container">
+
+
+      <div class="top-section">
+
+
+      <div class="top-section">
+        <div class="left-section" style="width: 40%;">
+          <img src="{{url_for('static', filename='sbm_logo.png')}}" alt="Long Island Cares Logo" class="mx-auto h-8 w-auto mb-3">
+          <h1 class="text-3xl font-bold tracking-tight text-center text-red-700 mb-2">Long Island Community Resources Test</h1>
+          <p class="text-center leading-6 text-gray-600">Search for resources by zipcode and distance.</p>
+          </div>
+
+
+
+      
+      <div class="search-bar" style="width: 60%;">
+        <form action="/" method="POST" class="p-2 rounded shadow-md bg-white">
+
+       <!-- Grid layout for form elements -->
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+    
+         <!-- Category Select -->
+           <div>
+            <label for="category" class="block text-gray-700 text-sm font-bold mb-2">Category:</label>
+            <select id="category" name="category" class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+             <option value="all">All selected</option>
+               {% for category in unique_filter_tags %}
+              <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+           </select>
+           </div>
+    
+        <!-- Delivery Method Select -->
+           <div>
+            <label for="deliverymethod" class="block text-gray-700 text-sm font-bold mb-2">Delivery Method:</label>
+            <select id="deliverymethod" name="deliverymethod" class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+             <option value="all">All selected</option>
+             {% for deliverymethod in unique_delivery_method %}
+                <option value="{{ deliverymethod }}">{{ deliverymethod }}</option>
+              {% endfor %}
+            </select>
+            </div>
+    
+        <!-- Zipcode Input -->
+            <div>
+             <label for="zipcode" class="block text-gray-700 text-sm font-bold mb-2">Zipcode:</label>
+           <!-- Conditional rendering for zipcode input -->
+           {% if zipcode %}
+              <input type="text" value="{{ zipcode }}" id="zipcode" name="zipcode" pattern="[0-9]{5}" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+           {% else %}
+             <input type="text" value="11733" id="zipcode" name="zipcode" pattern="[0-9]{5}" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+            {% endif %}
+           </div>
+    
+        <!-- Distance Input -->
+           <div>
+            <label for="distance" class="block text-gray-700 text-sm font-bold mb-2">Distance (miles):</label>
+            <!-- Conditional rendering for distance input -->
+           {% if distance %}
+              <input type="number" value="{{ distance }}" id="distance" name="distance" min="1" max="99" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+            {% else %}
+              <input type="number" value="99" id="distance" name="distance" min="1" max="99" required class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+            {% endif %}
+            </div>
+    
+    
+        <!-- Submit Button -->
+          <div class="mt-6">
+          <input type="submit" value="Search" class="bg-red-700 hover:bg-red-500 text-white font-bold py-2 px-4 rounded w-full focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-transparent">
+            </div>
+        </div>  
+      </form>
+      </div>
+
+
+
+      <div class="right-section" style="width: 20%;">
+        <button id="reviewBtn" class="bg-red-700 hover:bg-red-500 text-white font-bold py-2 px-4 rounded">Review</button>
+
+
+      </div>
+
+
+    </div>
+
+    
+  <div class="bottom-section">
+
+
+
+
+    <!-- Display Results -->
+    <div class="left-content">
+     {% if results %}
+        <h2 class="text-xl font-bold mt-5">Results for {{ zipcode }} within {{ distance }} miles</h2>
+
+
+
+
+
+      <!-- add in a line with padding of 10 px -->
+      <div class="border-b-2 border-gray-300 mt-10 mb-10"></div>
+
+      <!-- create a print results button -->
+      <div class="text-left">
+        <button onclick="window.print()" class="bg-red-700 hover:bg-red-500 text-white font-bold py-2 px-4 rounded mt-2">Print Results</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {% for result in results %}
+          <div class="bg-gray-100 p-6 rounded-lg shadow-md transition duration-300 ease-in-out hover:bg-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">{{ result.organization }}</h3>
+            <h5 class="text-sm font-semibold text-gray-600">Service Tag: {{ result.filter_tags }}</h5> 
+            <h5 class="text-sm font-semibold text-gray-600">Delivery Method: {{ result.delivery_method }}</h5>
+            <p class="text-gray-600">{{ result.address }}, {{ result.town }}, {{ result.zip_code }}</p>
+            <p class="text-gray-600"><strong>Phone:</strong> {{ result.phone_number }}</p>
+            <p class="text-gray-600"><strong>Hours:</strong> {{ result.hours_of_operation }}</p>
+            {% if result.website and result.website != 'nan' %}
+            <p><a href="{{ result.website }}" class="text-blue-500 hover:text-blue-600" target="_blank">Website</a></p>
+            {% else %}
+              <p>No website available</p>
+            {% endif %}
+
+            <!-- create accordian for more info -->
+            <div class="mt-2">
+              <details>
+                <summary class="text-sm font-semibold text-gray-600">Additional Details</summary>
+
+                {% if result.additional_details == 'nan' %}
+                  <p class="text-xs text-gray-600 overflow-x-auto whitespace-pre-wrap">No additional details available</p>
+                {% else %}
+                  <p class="text-xs text-gray-600 overflow-x-auto whitespace-pre-wrap">{{ result.additional_details }}</p>
+                {% endif %}
+
+              </details>
+            </div>
+
+
+
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+   </div>
+
+   <div class="right-map">
+    <div id="map"></div>
+  </div>
+
+
+
+
+
+    <script>
+      // Check if results_json exists and is not empty
+      var results_json = '{{ results_json | safe }}';
+      console.log('Results JSON initial: ', results_json)
+
+      if (results_json && results_json !== '[]') {
+        var results;
+        
+        try {
+          results = JSON.parse(results_json);
+        } catch (e) {
+          console.error('Error parsing JSON:', e);
+          // Handle error, perhaps hide the map or show a message
+          document.getElementById('map').style.display = 'none';
+          // Exit from the script
+          throw new Error('Stopping script execution due to JSON parsing error.');
+        }
+      
+        // Initialize the map
+        var map = L.map('map').setView([40.789142, -73.134960], 9);
+    
+        // Add the OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18
+        }).addTo(map);
+    
+        // Loop through the results and add markers
+        results.forEach(function(result) {
+          if (result.geometry && result.geometry.coordinates) {
+            var lat = result.geometry.coordinates[1];
+            var lng = result.geometry.coordinates[0];
+
+            console.log('Lat: ', lat)
+            console.log('Lng: ', lng)
+    
+            // Check if latitude and longitude are valid numbers
+            if (!isNaN(lat) && !isNaN(lng)) {
+              var marker = L.marker([lat, lng]).addTo(map);
+    
+              // Create a popup
+              var popup = L.popup().setContent("<b>" + result.organization + "</b><br>" + result.filter_tags + "</b><br>" + result.address);
+    
+              // Bind the popup to open on mouseover
+              marker.on('mouseover', function() {
+                marker.openPopup();
+              });
+    
+              // Bind the popup to close on mouseout
+              marker.on('mouseout', function() {
+                marker.closePopup();
+              });
+    
+              // Optionally, bind the popup to open on click as well
+              marker.bindPopup(popup);
+            }
+          }
+        });
+      } else {
+        // Optionally, hide the map container or display a message if there are no results
+        document.getElementById('map').style.display = 'none';
+      }
+    </script>
+    
+    
+
+
+  </body>
+</html>
+
+
+
